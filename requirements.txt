@@ -2,56 +2,58 @@
 # NexaSupport AI - Requirements
 # AI-Powered IT Support & Incident Resolution Agent
 # =============================================================
+# NOTE: All packages pinned to versions with Python 3.13
+#       pre-built wheels for Windows (no C/Rust compiler needed).
+# =============================================================
 
 # ── Core ──────────────────────────────────────────────────────
 python-dotenv==1.0.1           # Load .env file into os.environ
-pydantic==2.7.4                # Data validation (used by FastAPI)
-pydantic-settings==2.3.4       # Settings management from .env
+pydantic>=2.9.0                # Data validation — 2.9+ has py3.13 wheels
+pydantic-settings>=2.5.0       # Settings management from .env
 
 # ── FastAPI Backend ───────────────────────────────────────────
-fastapi==0.111.1               # REST API framework
-uvicorn[standard]==0.30.1      # ASGI server to run FastAPI
+fastapi>=0.115.0               # REST API framework
+uvicorn[standard]>=0.30.1      # ASGI server to run FastAPI
 
 # ── Streamlit Frontend ────────────────────────────────────────
-streamlit>=1.36.0              # Web UI framework
+streamlit>=1.38.0              # Web UI framework
 
 # ── LLM Providers (Modular - use one or both) ─────────────────
-google-generativeai==0.7.2     # Google Gemini API client
-openai==1.35.14                # OpenAI API client (optional fallback)
+google-generativeai>=0.8.0     # Google Gemini API client
+openai>=1.40.0                 # OpenAI API client (optional fallback)
 
-# ── LangChain (RAG Orchestration) ────────────────────────────
-langchain==0.2.11              # LangChain core
-langchain-community==0.2.10    # Community integrations (ChromaDB, etc.)
-langchain-google-genai==1.0.8  # Gemini LangChain integration
-langchain-openai==0.1.17       # OpenAI LangChain integration (optional)
+# ── Text Splitting (replaces full langchain stack) ────────────
+# Only langchain-text-splitters is used (RecursiveCharacterTextSplitter).
+# Full langchain==0.2.x requires numpy<2 which has no py3.13 wheel.
+langchain-text-splitters>=0.3.0  # Text chunking utilities
 
 # ── Embeddings ────────────────────────────────────────────────
-sentence-transformers>=3.0.1   # Local HuggingFace embedding models
+sentence-transformers>=3.1.0   # Local HuggingFace embedding models
 
 # ── Vector Database ───────────────────────────────────────────
 chromadb>=0.5.3                # Local vector store
 
 # ── Document Processing ───────────────────────────────────────
-pymupdf>=1.25.0                # PDF text extraction (supports Python 3.13 wheels)
-python-docx==1.1.2             # Word document processing
+pymupdf>=1.25.0                # PDF text extraction (py3.13 wheels available)
+python-docx>=1.1.2             # Word document processing
 
 # ── Database ─────────────────────────────────────────────────
-sqlalchemy==2.0.31             # ORM for SQLite (dev) / PostgreSQL (prod)
-aiosqlite==0.20.0              # Async SQLite driver
+sqlalchemy>=2.0.31             # ORM for SQLite (dev) / PostgreSQL (prod)
+aiosqlite>=0.20.0              # Async SQLite driver
 
 # ── HTTP Client ───────────────────────────────────────────────
-httpx==0.27.0                  # Async HTTP client (used in tools)
-
-# ── RAG Evaluation ────────────────────────────────────────────
-ragas>=0.1.14                  # RAG evaluation metrics (faithfulness, recall, etc.)
+httpx>=0.27.0                  # Async HTTP client (used in tools & testing)
 
 # ── Testing ───────────────────────────────────────────────────
 pytest>=8.2.2                  # Test framework
 pytest-asyncio>=0.23.7         # Async test support
-httpx==0.27.0                  # Test client for FastAPI
 
 # ── Utilities ─────────────────────────────────────────────────
-loguru==0.7.2                  # Clean, structured logging
-rich==13.7.1                   # Pretty terminal output
-python-multipart==0.0.9        # File upload support for FastAPI
-tiktoken==0.7.0                # Token counting for OpenAI models
+loguru>=0.7.2                  # Clean, structured logging
+rich>=13.7.1                   # Pretty terminal output
+python-multipart>=0.0.9        # File upload support for FastAPI
+
+# ── Removed / Optional ───────────────────────────────────────
+# ragas        — requires numpy<2 (no py3.13 wheel); add manually if needed
+# langchain    — full stack not needed; only text-splitters used above
+# tiktoken     — no py3.13 wheel; optional for OpenAI token counting
