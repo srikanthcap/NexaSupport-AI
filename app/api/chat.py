@@ -53,15 +53,14 @@ async def chat(request: QueryRequest) -> ChatResponse:
                 if len(request.query) > 80 else f"Chat request: '{request.query}'")
 
     try:
-        # Get the singleton RAG pipeline
-        pipeline = get_rag_pipeline()
+        # Use the Agentic Support Orchestrator with tool-augmented workflows
+        from app.agents.support_agent import get_support_agent
+        agent = get_support_agent()
 
-        # Run the RAG query
-        rag_response: RAGResponse = pipeline.query(
+        rag_response: RAGResponse = await agent.execute_plan(
             query=request.query,
             top_k=request.top_k,
             conversation_history=request.conversation_history or None,
-            filter_source=request.filter_source,
         )
 
         # Convert internal RAGResponse to the API response schema
