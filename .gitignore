@@ -1,0 +1,77 @@
+# =============================================================
+# NexaSupport AI — .gitignore
+# Prevents sensitive files and unnecessary artifacts from being
+# committed to your GitHub repository.
+# =============================================================
+
+# ── Secrets (CRITICAL — Never commit these!) ──────────────────
+.env
+
+# ── Python ────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+wheels/
+*.egg-link
+.installed.cfg
+lib/
+lib64/
+
+# ── Virtual Environment ───────────────────────────────────────
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# ── Data & Databases ──────────────────────────────────────────
+# Exclude generated databases and vector stores (too large for Git)
+data/chroma_db/
+*.db
+data/processed/
+data/tickets/
+
+
+# Keep the raw documents folder (with sample docs for demo)
+!data/documents/
+
+# ── Jupyter Notebooks ─────────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# ── IDE / Editor ──────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ── OS ────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ── Logs ──────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── Testing ───────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# ── Evaluation Outputs ────────────────────────────────────────
+evaluation/results/
