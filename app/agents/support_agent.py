@@ -1,17 +1,5 @@
 # =============================================================
-# NexaSupport AI — Agentic Support Orchestrator
-# =============================================================
-# PURPOSE:
-#   Orchestrates intelligent reasoning and tool calling.
-#   1. Analyzes user query intent (Troubleshooting, Status check, Access inquiry, Escalation).
-#   2. Determines required tools:
-#      - Knowledge Base (RAG chunks)
-#      - Past incident resolutions
-#      - Live system health (outage checking)
-#      - Permission / Account check
-#   3. Executes selected tools concurrently.
-#   4. Synthesizes a structured, grounded answer with source attribution
-#      and confidence scoring.
+# NexaSupport AI — Agentic Support Orchestrator (Upgraded)
 # =============================================================
 
 import asyncio
@@ -33,11 +21,17 @@ from app.tools.it_tools import (
     ServiceStatusInput,
     UserAccessInput,
 )
+from app.agents.guardrails import evaluate_response_confidence
+from app.agents.workflows import (
+    format_vpn_workflow_response,
+    format_access_workflow_response,
+)
 
 
 class SupportAgent:
     """
-    Intelligent IT Support Agent orchestrator with tool-augmented reasoning.
+    Intelligent IT Support Agent orchestrator with tool-augmented reasoning
+    and multi-signal confidence guardrails.
     """
 
     def __init__(self):
@@ -46,11 +40,9 @@ class SupportAgent:
     def _determine_intent_and_tools(self, query: str) -> Dict[str, Any]:
         """
         Deterministic + heuristic routing for tool selection.
-        Enables lightning-fast decisions without unnecessary LLM hops when obvious,
-        while maintaining multi-tool invocation capability.
         """
         q_lower = query.lower()
-        tools_to_run = ["knowledge_base"]  # Always search knowledge base by default
+        tools_to_run = ["knowledge_base"]
 
         # Outage / Service status detection
         status_keywords = ["down", "outage", "status", "slow", "maintenance", "working", "issue today"]
@@ -63,13 +55,11 @@ class SupportAgent:
             tools_to_run.append("previous_tickets")
 
         # Access / permission inquiry detection
-        access_keywords = ["access", "permission", "portal", "locked", "sap", "jira", "aws", "login failed"]
+        access_keywords = ["access", "permission", "portal", "locked", "sap", "jira", "aws", "login failed", "password"]
         if any(k in q_lower for k in access_keywords):
             tools_to_run.append("user_access")
 
-        return {
-            "tools": list(set(tools_to_run))
-        }
+        return {"tools": list(set(tools_to_run))}
 
     async def execute_plan(
         self,
@@ -79,12 +69,12 @@ class SupportAgent:
         conversation_history: Optional[List[Dict[str, str]]] = None,
     ) -> RAGResponse:
         """
-        Execute tool-augmented resolution workflow.
+        Execute tool-augmented resolution workflow with confidence guardrails.
         """
         start_time = time.time()
         routing = self._determine_intent_and_tools(query)
         selected_tools = routing["tools"]
-        logger.info(f"SupportAgent triggered. Active tools for query: {selected_tools}")
+        logger.info(f"SupportAgent triggered. Active tools: {selected_tools}")
 
         tasks = []
         task_names = []
@@ -101,7 +91,6 @@ class SupportAgent:
 
         # 3. Live Service Status
         if "service_status" in selected_tools:
-            # Extract possible service name
             service_target = None
             for s in ["vpn", "email", "wifi", "sso", "jira", "sap"]:
                 if s in query.lower():
@@ -130,12 +119,57 @@ class SupportAgent:
             else:
                 results_map[name] = output
 
+        # ── Phase 10: Check Domain Workflows First ──────────────
+        # Check Access Workflow (Lockout, Permissions)
+        access_override = None
+        if "user_access" in results_map and not results_map["user_access"].get("error"):
+            access_override = format_access_workflow_response(results_map["user_access"], query)
+
+        # Check VPN Outage Workflow
+        vpn_override = None
+        if "service_status" in results_map and not results_map["service_status"].get("error"):
+            vpn_override = format_vpn_workflow_response(
+                results_map["service_status"],
+                [],
+                results_map.get("previous_tickets", {}).get("incidents", []),
+            )
+
+        if vpn_override:
+            elapsed = (time.time() - start_time) * 1000
+            return RAGResponse(
+                query=query,
+                answer=vpn_override,
+                sources=[],
+                confidence=0.95,
+                is_grounded=True,
+                needs_escalation=False,
+                llm_model="system-rule",
+                retrieval_count=0,
+                latency_ms=round(elapsed, 1),
+            )
+
+        if access_override:
+            elapsed = (time.time() - start_time) * 1000
+            return RAGResponse(
+                query=query,
+                answer=access_override,
+                sources=[],
+                confidence=0.92,
+                is_grounded=True,
+                needs_escalation=False,
+                llm_model="system-rule",
+                retrieval_count=0,
+                latency_ms=round(elapsed, 1),
+            )
+
         # Extract knowledge base citations
         sources: List[SourceCitation] = []
         kb_context_text = ""
         kb_data = results_map.get("knowledge_base", {})
+        retrieved_raw_chunks = []
         if "documents" in kb_data:
-            for d in kb_data["documents"]:
+            from app.rag.retriever import RetrievedChunk
+            for idx, d in enumerate(kb_data["documents"]):
                 sources.append(
                     SourceCitation(
                         citation_label=d["citation"],
@@ -145,12 +179,23 @@ class SupportAgent:
                         similarity_score=d["similarity"],
                     )
                 )
+                retrieved_raw_chunks.append(
+                    RetrievedChunk(
+                        text=d["content"],
+                        source_file=d["source_file"],
+                        title=d["title"],
+                        chunk_index=0,
+                        similarity_score=d["similarity"],
+                    )
+                )
                 kb_context_text += f"\n[{d['citation']}] (From {d['title']}):\n{d['content']}\n"
 
-        # Format historical incidents context
+        # Check historical tickets
         tickets_context = ""
         ticket_data = results_map.get("previous_tickets", {})
+        has_ticket_match = False
         if "incidents" in ticket_data and ticket_data["incidents"]:
+            has_ticket_match = True
             tickets_context += "\n--- SIMILAR HISTORICAL RESOLVED INCIDENTS ---\n"
             for t in ticket_data["incidents"]:
                 tickets_context += (
@@ -159,21 +204,38 @@ class SupportAgent:
                     f"Proven Resolution: {t['resolution']}\n\n"
                 )
 
-        # Format service status context
-        status_context = ""
-        status_data = results_map.get("service_status", {})
-        if "services" in status_data:
-            status_context += f"\n--- LIVE SERVICE STATUS ---\n{json.dumps(status_data['services'], indent=2)}\n"
+        # ── Phase 11: Multi-Signal Guardrail Evaluation ─────────
+        guardrail_eval = evaluate_response_confidence(
+            query=query,
+            retrieved_chunks=retrieved_raw_chunks,
+            has_outage=False,
+            has_historical_match=has_ticket_match,
+            has_user_access_data=bool(results_map.get("user_access", {}).get("found")),
+        )
 
-        # Format user permission context
-        access_context = ""
-        access_data = results_map.get("user_access", {})
-        if access_data and not access_data.get("error"):
-            access_context += f"\n--- USER ACCESS STATUS ({employee_id}) ---\n{json.dumps(access_data, indent=2)}\n"
+        # If completely ungrounded, refuse to hallucinate
+        if guardrail_eval.score < 0.35 and not has_ticket_match:
+            elapsed = (time.time() - start_time) * 1000
+            refusal_msg = (
+                "⚠️ **Unable to find reliable IT documentation for this issue.**\n\n"
+                "To ensure your system is not misconfigured, I will not attempt to guess troubleshooting steps. "
+                "Please submit an IT Support Ticket using the form below or contact the Service Desk directly."
+            )
+            return RAGResponse(
+                query=query,
+                answer=refusal_msg,
+                sources=[],
+                confidence=guardrail_eval.score,
+                is_grounded=False,
+                needs_escalation=True,
+                llm_model=settings.GEMINI_MODEL,
+                retrieval_count=0,
+                latency_ms=round(elapsed, 1),
+            )
 
         # Build Synthesis Prompt
         synthesis_prompt = f"""You are the NexaSupport AI Tier-1 IT Support Agent.
-Your goal is to provide a clear, step-by-step resolution to the employee's problem.
+Provide a clear, step-by-step resolution to the employee's problem.
 
 EMPLOYEE QUERY:
 "{query}"
@@ -182,18 +244,11 @@ EVIDENCE GATHERED BY AGENT TOOLS:
 1. OFFICIAL KNOWLEDGE BASE:
 {kb_context_text if kb_context_text else "No specific documents found."}
 
-2. SYSTEM HEALTH & OUTAGE CHECKS:
-{status_context if status_context else "No active outages reported."}
-
-3. PREVIOUS INCIDENTS & PAST RESOLUTIONS:
+2. PREVIOUS INCIDENTS & PAST RESOLUTIONS:
 {tickets_context if tickets_context else "No matching historical tickets."}
-
-4. USER PERMISSION RECORD:
-{access_context if access_context else "Standard access."}
 
 INSTRUCTIONS:
 - Directly answer the employee's issue using the gathered evidence.
-- If a relevant service is degraded or in maintenance (e.g. WiFi or SAP), inform them immediately.
 - If historical tickets have solved this exact error code or issue, cite that proven resolution.
 - Reference official knowledge base citations like [Source 1], [Source 2] where appropriate.
 - If you don't have enough information, honestly state it and offer to escalate to an IT engineer.
@@ -215,25 +270,15 @@ INSTRUCTIONS:
             prompt_tokens = 0
             output_tokens = 0
 
-        # Calculate confidence
-        confidence = 0.5
-        if sources:
-            confidence = max([s.similarity_score for s in sources])
-            if results_map.get("previous_tickets", {}).get("matches_count", 0) > 0:
-                confidence = min(1.0, confidence + 0.1)
-        elif status_context or access_context:
-            confidence = 0.85
-
-        needs_escalation = confidence < settings.CONFIDENCE_THRESHOLD
         elapsed = (time.time() - start_time) * 1000
 
         return RAGResponse(
             query=query,
             answer=answer,
             sources=sources,
-            confidence=round(confidence, 2),
-            is_grounded=len(sources) > 0 or bool(tickets_context),
-            needs_escalation=needs_escalation,
+            confidence=guardrail_eval.score,
+            is_grounded=len(sources) > 0 or has_ticket_match,
+            needs_escalation=not guardrail_eval.is_confident,
             llm_model=settings.GEMINI_MODEL,
             retrieval_count=len(sources),
             latency_ms=round(elapsed, 1),
