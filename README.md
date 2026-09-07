@@ -141,9 +141,15 @@ nexasupport-ai/
 | Phase 5 — Basic RAG Pipeline | ✅ Complete | `app/rag/retriever.py`, `prompt_builder.py`, `llm_client.py`, `pipeline.py` |
 | Phase 6 — Source Citations + API | ✅ Complete | `app/models/schemas.py`, `app/api/chat.py` |
 | Phase 7 — Incident Database | ✅ Complete | `app/database/`, `app/services/ticket_service.py`, `app/api/tickets.py` |
-| Phase 8–10 — Agentic AI & Tools | ⏳ Upcoming | |
-| Phase 11–14 — Confidence, Memory, Hybrid, Reranking | ⏳ Upcoming | |
-| Phase 15–25 | ⏳ Upcoming | |
+| Phase 8 — Agentic Orchestrator | ✅ Complete | `app/agents/support_agent.py` — 4 parallel tool calls |
+| Phase 9 — Tool Calling Suite | ✅ Complete | `app/tools/it_tools.py` — KB search, ticket search, service status, user access, create ticket |
+| Phase 10 — Domain Workflows | ✅ Complete | `app/agents/workflows.py` — VPN outage & account lockout flows |
+| Phase 11 — Confidence Guardrails | ✅ Complete | `app/agents/guardrails.py` — multi-signal hallucination prevention |
+| Phase 12 — Conversation Memory | ✅ Complete | `app/agents/memory.py` — multi-turn query reformulation |
+| Phase 13 — Hybrid Retrieval + Reranking | ✅ Complete | `app/rag/hybrid_retriever.py` — BM25 + semantic RRF reranking |
+| Phase 14 — Auto-Escalation + Ticket Creation | ✅ Complete | `support_agent.py` — auto-creates ticket on low confidence, appends ticket ID to response |
+| Phase 15 — Unit Test Suite | ✅ Complete | `tests/test_agent.py`, `tests/test_tools.py`, `tests/test_api.py`, `tests/test_chunker.py` |
+| Phase 16 — RAG Evaluation Suite | ✅ Complete | `evaluation/evaluate_rag.py`, `evaluation/golden_dataset.json` (10 Q&A pairs) |
 
 ---
 

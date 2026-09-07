@@ -16,10 +16,12 @@ from app.tools.it_tools import (
     tool_search_previous_tickets,
     tool_check_service_status,
     tool_check_user_access,
+    tool_create_ticket,
     KnowledgeSearchInput,
     TicketSearchInput,
     ServiceStatusInput,
     UserAccessInput,
+    CreateTicketInput,
 )
 from app.agents.guardrails import evaluate_response_confidence
 from app.agents.workflows import (
@@ -218,13 +220,36 @@ class SupportAgent:
             has_user_access_data=bool(results_map.get("user_access", {}).get("found")),
         )
 
-        # If completely ungrounded, refuse to hallucinate
+        # If completely ungrounded, refuse to hallucinate — auto-create an escalation ticket
         if guardrail_eval.score < 0.35 and not has_ticket_match:
+            auto_ticket_id = None
+            try:
+                ticket_input = CreateTicketInput(
+                    user_id=employee_id,
+                    category="Other",
+                    priority="medium",
+                    summary=query[:200],
+                    description=(
+                        f"Auto-escalated by NexaSupport AI (confidence={guardrail_eval.score:.0%}).\n"
+                        f"Original query: {query}"
+                    ),
+                )
+                ticket_result = await tool_create_ticket(ticket_input)
+                auto_ticket_id = ticket_result.get("ticket_id")
+                logger.info(f"Auto-escalation ticket created: {auto_ticket_id}")
+            except Exception as te:
+                logger.error(f"Auto-ticket creation failed during escalation: {te}")
+
             elapsed = (time.time() - start_time) * 1000
+            ticket_line = (
+                f"\n\n✅ **Ticket auto-created: `{auto_ticket_id}`** — An IT engineer will review and respond shortly."
+                if auto_ticket_id
+                else "\n\nPlease submit an IT Support Ticket using the form below or contact the Service Desk directly."
+            )
             refusal_msg = (
                 "⚠️ **Unable to find reliable IT documentation for this issue.**\n\n"
-                "To ensure your system is not misconfigured, I will not attempt to guess troubleshooting steps. "
-                "Please submit an IT Support Ticket using the form below or contact the Service Desk directly."
+                "To ensure accuracy I will not guess troubleshooting steps for an undocumented problem."
+                + ticket_line
             )
             return RAGResponse(
                 query=query,
@@ -277,6 +302,35 @@ INSTRUCTIONS:
 
         elapsed = (time.time() - start_time) * 1000
 
+        # If confidence is low but not zero, still auto-create an escalation ticket
+        # but include the best-effort answer alongside it
+        auto_ticket_id = None
+        if not guardrail_eval.is_confident:
+            try:
+                ticket_input = CreateTicketInput(
+                    user_id=employee_id,
+                    category=_infer_category(query),
+                    priority="medium",
+                    summary=query[:200],
+                    description=(
+                        f"Auto-escalated by NexaSupport AI (confidence={guardrail_eval.score:.0%}).\n"
+                        f"Original query: {query}\n"
+                        f"Best-effort answer provided; human review recommended."
+                    ),
+                )
+                ticket_result = await tool_create_ticket(ticket_input)
+                auto_ticket_id = ticket_result.get("ticket_id")
+                logger.info(f"Low-confidence escalation ticket created: {auto_ticket_id}")
+            except Exception as te:
+                logger.error(f"Auto-ticket creation failed: {te}")
+
+        if auto_ticket_id:
+            answer += (
+                f"\n\n---\n⚠️ **Low confidence detected.** "
+                f"Escalation ticket **`{auto_ticket_id}`** has been auto-created. "
+                "An IT engineer will review this and follow up if the above steps don't resolve the issue."
+            )
+
         return RAGResponse(
             query=query,
             answer=answer,
@@ -290,6 +344,24 @@ INSTRUCTIONS:
             prompt_tokens=prompt_tokens,
             output_tokens=output_tokens,
         )
+
+
+def _infer_category(query: str) -> str:
+    """Heuristic category classifier for auto-created escalation tickets."""
+    q = query.lower()
+    if any(k in q for k in ["vpn", "cisco", "anyconnect", "network", "wifi", "internet"]):
+        return "VPN"
+    if any(k in q for k in ["email", "outlook", "mail", "exchange", "teams"]):
+        return "Email"
+    if any(k in q for k in ["password", "login", "locked", "sso", "mfa", "authenticator"]):
+        return "Password"
+    if any(k in q for k in ["access", "permission", "portal", "sap", "jira", "aws"]):
+        return "Access"
+    if any(k in q for k in ["laptop", "screen", "keyboard", "mouse", "printer", "hardware"]):
+        return "Hardware"
+    if any(k in q for k in ["install", "software", "app", "crash", "update", "license"]):
+        return "Software"
+    return "Other"
 
 
 _agent_instance: Optional[SupportAgent] = None

@@ -185,7 +185,7 @@ with st.sidebar:
     top_k = st.slider("Sources to retrieve", 1, 10, 5, help="More sources = more context for the AI")
 
     st.divider()
-    st.caption("NexaSupport AI v1.0 | Phases 2–7")
+    st.caption("NexaSupport AI v2.0 | Phases 1–16 Complete")
 
 
 # ── Initialize session state ───────────────────────────────────────────────────

@@ -1,0 +1,82 @@
+[
+  {
+    "id": "Q001",
+    "category": "VPN",
+    "query": "My VPN shows Error 809 and cannot connect. What should I do?",
+    "expected_keywords": ["809", "firewall", "port", "1723", "UDP", "GRE"],
+    "expected_source_contains": "vpn",
+    "notes": "Classic L2TP/IPSec Error 809 — firewall blocking VPN ports"
+  },
+  {
+    "id": "Q002",
+    "category": "VPN",
+    "query": "How do I install and configure the corporate Cisco AnyConnect VPN client?",
+    "expected_keywords": ["anyconnect", "install", "gateway", "connect"],
+    "expected_source_contains": "vpn",
+    "notes": "Standard VPN onboarding question"
+  },
+  {
+    "id": "Q003",
+    "category": "Email",
+    "query": "My Outlook is stuck on Loading Profile and won't open. How do I fix it?",
+    "expected_keywords": ["outlook", "profile", "safe mode", "cache", "ost"],
+    "expected_source_contains": "email",
+    "notes": "Corrupt Outlook profile / OST file"
+  },
+  {
+    "id": "Q004",
+    "category": "Email",
+    "query": "How do I set up my work email account on my iPhone?",
+    "expected_keywords": ["iphone", "mail", "exchange", "autodiscover"],
+    "expected_source_contains": "email",
+    "notes": "Mobile email setup — Exchange ActiveSync"
+  },
+  {
+    "id": "Q005",
+    "category": "Password",
+    "query": "I forgot my Windows login password. How do I reset it without losing my files?",
+    "expected_keywords": ["password", "reset", "active directory", "helpdesk", "sspr"],
+    "expected_source_contains": "password",
+    "notes": "Self-service password reset / AD account unlock"
+  },
+  {
+    "id": "Q006",
+    "category": "Password",
+    "query": "How do I set up Multi-Factor Authentication (MFA) on my account?",
+    "expected_keywords": ["mfa", "authenticator", "microsoft authenticator", "qr"],
+    "expected_source_contains": "password",
+    "notes": "MFA enrollment — Microsoft Authenticator"
+  },
+  {
+    "id": "Q007",
+    "category": "Network",
+    "query": "The office WiFi keeps dropping every few minutes. What can I do?",
+    "expected_keywords": ["wifi", "network", "disconnect", "channel", "ip"],
+    "expected_source_contains": "network",
+    "notes": "Intermittent WiFi — roaming/channel interference"
+  },
+  {
+    "id": "Q008",
+    "category": "Network",
+    "query": "How do I connect to the company network when working from home?",
+    "expected_keywords": ["vpn", "remote", "connect", "home", "network"],
+    "expected_source_contains": "network",
+    "notes": "Remote work network access"
+  },
+  {
+    "id": "Q009",
+    "category": "Software",
+    "query": "My laptop is very slow and takes a long time to start up. How can I speed it up?",
+    "expected_keywords": ["startup", "performance", "disk", "memory", "task manager"],
+    "expected_source_contains": "hardware",
+    "notes": "General laptop performance / startup optimization"
+  },
+  {
+    "id": "Q010",
+    "category": "Access",
+    "query": "I need access to the Jira project management tool. Who do I contact?",
+    "expected_keywords": ["jira", "access", "request", "manager", "provisioning", "it"],
+    "expected_source_contains": "password",
+    "notes": "Software access request process"
+  }
+]

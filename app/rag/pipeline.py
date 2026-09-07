@@ -28,7 +28,7 @@
 
 import time
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Any, Optional
 
 from loguru import logger
 
@@ -149,15 +149,16 @@ class RAGPipeline:
 
     def __init__(
         self,
-        retriever: Optional[RAGRetriever] = None,
+        retriever: Optional[Any] = None,
         llm_client: Optional[LLMClient] = None,
     ):
         """
         Args:
-            retriever  : RAGRetriever instance (created if not provided).
+            retriever  : HybridRetriever or RAGRetriever instance.
             llm_client : LLMClient instance (created if not provided).
         """
-        self._retriever = retriever or RAGRetriever()
+        from app.rag.hybrid_retriever import HybridRetriever
+        self._retriever = retriever or HybridRetriever()
         self._llm = llm_client or get_llm_client()
 
     def query(
