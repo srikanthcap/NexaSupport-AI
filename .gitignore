@@ -74,4 +74,6 @@ htmlcov/
 .tox/
 
 # ── Evaluation Outputs ────────────────────────────────────────
-evaluation/results/
+evaluation/results/*.json
+evaluation/results/*.md
+!evaluation/results/.gitkeep

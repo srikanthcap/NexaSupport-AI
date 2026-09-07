@@ -59,6 +59,7 @@ async def chat(request: QueryRequest) -> ChatResponse:
 
         rag_response: RAGResponse = await agent.execute_plan(
             query=request.query,
+            employee_id=request.employee_id,
             top_k=request.top_k,
             conversation_history=request.conversation_history or None,
         )

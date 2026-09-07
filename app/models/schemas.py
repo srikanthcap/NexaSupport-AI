@@ -55,6 +55,12 @@ class QueryRequest(BaseModel):
         description="Restrict retrieval to a specific document file (optional).",
         example="01_vpn_troubleshooting.md",
     )
+    employee_id: str = Field(
+        default="EMP-GUEST",
+        max_length=50,
+        description="Employee ID of the requester. Used for user access checks and auto-ticket creation.",
+        example="EMP-1042",
+    )
 
     class Config:
         json_schema_extra = {

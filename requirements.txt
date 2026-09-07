@@ -13,7 +13,7 @@ fastapi==0.111.1               # REST API framework
 uvicorn[standard]==0.30.1      # ASGI server to run FastAPI
 
 # ── Streamlit Frontend ────────────────────────────────────────
-streamlit==1.36.0              # Web UI framework
+streamlit>=1.36.0              # Web UI framework
 
 # ── LLM Providers (Modular - use one or both) ─────────────────
 google-generativeai==0.7.2     # Google Gemini API client
@@ -26,10 +26,10 @@ langchain-google-genai==1.0.8  # Gemini LangChain integration
 langchain-openai==0.1.17       # OpenAI LangChain integration (optional)
 
 # ── Embeddings ────────────────────────────────────────────────
-sentence-transformers==3.0.1   # Local HuggingFace embedding models
+sentence-transformers>=3.0.1   # Local HuggingFace embedding models
 
 # ── Vector Database ───────────────────────────────────────────
-chromadb==0.5.3                # Local vector store
+chromadb>=0.5.3                # Local vector store
 
 # ── Document Processing ───────────────────────────────────────
 pymupdf>=1.25.0                # PDF text extraction (supports Python 3.13 wheels)
@@ -43,11 +43,11 @@ aiosqlite==0.20.0              # Async SQLite driver
 httpx==0.27.0                  # Async HTTP client (used in tools)
 
 # ── RAG Evaluation ────────────────────────────────────────────
-ragas==0.1.14                  # RAG evaluation metrics (faithfulness, recall, etc.)
+ragas>=0.1.14                  # RAG evaluation metrics (faithfulness, recall, etc.)
 
 # ── Testing ───────────────────────────────────────────────────
-pytest==8.2.2                  # Test framework
-pytest-asyncio==0.23.7         # Async test support
+pytest>=8.2.2                  # Test framework
+pytest-asyncio>=0.23.7         # Async test support
 httpx==0.27.0                  # Test client for FastAPI
 
 # ── Utilities ─────────────────────────────────────────────────

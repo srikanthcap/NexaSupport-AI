@@ -90,13 +90,14 @@ def check_backend() -> bool:
         return False
 
 
-def ask_ai(query: str, top_k: int = 5, history: list = None) -> dict | None:
+def ask_ai(query: str, top_k: int = 5, history: list = None, employee_id: str = "EMP-GUEST") -> dict | None:
     """Send a question to the RAG pipeline and return the response."""
     try:
         payload = {
             "query": query,
             "top_k": top_k,
             "conversation_history": history or [],
+            "employee_id": employee_id,
         }
         r = httpx.post(f"{API_BASE}/api/v1/chat", json=payload, timeout=30.0)
         if r.status_code == 200:
@@ -245,6 +246,34 @@ if page == "💬 Employee Chat":
                     if meta.get("needs_escalation"):
                         st.warning("⚠️ Low confidence — consider creating a support ticket below.")
 
+                    # Feedback buttons
+                    fb_col1, fb_col2, fb_col3 = st.columns([1, 1, 6])
+                    msg_idx = st.session_state.chat_history.index(msg)
+                    with fb_col1:
+                        if st.button("👍 Helpful", key=f"helpful_{msg_idx}"):
+                            try:
+                                httpx.post(f"{API_BASE}/api/v1/feedback", json={
+                                    "query": st.session_state.chat_history[msg_idx - 1]["content"] if msg_idx > 0 else "",
+                                    "answer": msg["content"],
+                                    "rating": "helpful",
+                                    "confidence": meta.get("confidence"),
+                                }, timeout=5.0)
+                                st.toast("✅ Thanks for the feedback!", icon="👍")
+                            except Exception:
+                                pass
+                    with fb_col2:
+                        if st.button("👎 Not Helpful", key=f"not_helpful_{msg_idx}"):
+                            try:
+                                httpx.post(f"{API_BASE}/api/v1/feedback", json={
+                                    "query": st.session_state.chat_history[msg_idx - 1]["content"] if msg_idx > 0 else "",
+                                    "answer": msg["content"],
+                                    "rating": "not_helpful",
+                                    "confidence": meta.get("confidence"),
+                                }, timeout=5.0)
+                                st.toast("📝 Feedback recorded — we'll work to improve!", icon="👎")
+                            except Exception:
+                                pass
+
     # Chat input
     st.divider()
     with st.form(key="chat_form", clear_on_submit=True):
@@ -273,7 +302,7 @@ if page == "💬 Employee Chat":
                     if m["role"] in ("user", "assistant")
                 ]
 
-                response = ask_ai(user_input.strip(), top_k=top_k, history=history)
+                response = ask_ai(user_input.strip(), top_k=top_k, history=history, employee_id=employee_id)
 
             if response:
                 # Store user message

@@ -1,0 +1,3 @@
+# This file ensures the results/ directory is tracked by Git
+# even when empty. Evaluation reports will be written here by
+# evaluation/evaluate_rag.py and are git-ignored (see .gitignore).

@@ -90,6 +90,9 @@ def create_app() -> FastAPI:
     from app.api.tickets import router as tickets_router
     app.include_router(tickets_router)
 
+    from app.api.feedback import router as feedback_router
+    app.include_router(feedback_router)
+
     # ── Health Check Route ────────────────────────────────────
     @app.get("/health", tags=["System"])
     async def health_check():
