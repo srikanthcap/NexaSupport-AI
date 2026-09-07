@@ -69,31 +69,36 @@ class SupportAgent:
         conversation_history: Optional[List[Dict[str, str]]] = None,
     ) -> RAGResponse:
         """
-        Execute tool-augmented resolution workflow with confidence guardrails.
+        Execute tool-augmented resolution workflow with memory and guardrails.
         """
         start_time = time.time()
-        routing = self._determine_intent_and_tools(query)
+        
+        # Phase 12: Memory-driven query reformulation for multi-turn dialogues
+        from app.agents.memory import reformulate_query_with_context
+        active_query = reformulate_query_with_context(query, conversation_history or [])
+
+        routing = self._determine_intent_and_tools(active_query)
         selected_tools = routing["tools"]
-        logger.info(f"SupportAgent triggered. Active tools: {selected_tools}")
+        logger.info(f"SupportAgent triggered. Query: '{active_query}' | Tools: {selected_tools}")
 
         tasks = []
         task_names = []
 
         # 1. Knowledge Base
         if "knowledge_base" in selected_tools:
-            tasks.append(tool_search_knowledge_base(KnowledgeSearchInput(query=query, top_k=top_k)))
+            tasks.append(tool_search_knowledge_base(KnowledgeSearchInput(query=active_query, top_k=top_k)))
             task_names.append("knowledge_base")
 
         # 2. Previous Tickets
         if "previous_tickets" in selected_tools:
-            tasks.append(tool_search_previous_tickets(TicketSearchInput(query=query, limit=3)))
+            tasks.append(tool_search_previous_tickets(TicketSearchInput(query=active_query, limit=3)))
             task_names.append("previous_tickets")
 
         # 3. Live Service Status
         if "service_status" in selected_tools:
             service_target = None
             for s in ["vpn", "email", "wifi", "sso", "jira", "sap"]:
-                if s in query.lower():
+                if s in active_query.lower():
                     service_target = s
                     break
             tasks.append(tool_check_service_status(ServiceStatusInput(service_name=service_target)))
@@ -103,7 +108,7 @@ class SupportAgent:
         if "user_access" in selected_tools:
             target_sys = "VPN"
             for s in ["sap", "jira", "aws", "vpn", "hubspot"]:
-                if s in query.lower():
+                if s in active_query.lower():
                     target_sys = s.upper()
                     break
             tasks.append(tool_check_user_access(UserAccessInput(user_id=employee_id, system_name=target_sys)))
