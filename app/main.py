@@ -98,7 +98,7 @@ def create_app() -> FastAPI:
     async def health_check():
         """
         Basic health check endpoint.
-        Used by load balancers, monitoring tools, and the Streamlit frontend.
+        Used by load balancers, monitoring tools, and the React/Streamlit frontend.
         """
         return {
             "status": "healthy",
@@ -107,6 +107,20 @@ def create_app() -> FastAPI:
             "llm_provider": settings.LLM_PROVIDER,
             "embedding_provider": settings.EMBEDDING_PROVIDER,
         }
+
+    # ── Static Files (React 18 Frontend) ──────────────────────
+    import os
+    from fastapi.staticfiles import StaticFiles
+    from fastapi.responses import FileResponse
+
+    frontend_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend-react")
+    if os.path.exists(frontend_dir):
+        app.mount("/frontend-react", StaticFiles(directory=frontend_dir), name="frontend-react")
+
+        @app.get("/", include_in_schema=False)
+        async def serve_react_app():
+            return FileResponse(os.path.join(frontend_dir, "index.html"))
+
 
     return app
 
