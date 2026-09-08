@@ -22,8 +22,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from app.database.models import Base
 
 
-# In-memory SQLite — fast, isolated, no files left on disk
-TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+# In-memory SQLite — fast, isolated, shared across connections
+TEST_DATABASE_URL = "sqlite+aiosqlite:///file:memdb1?mode=memory&cache=shared&uri=true"
 
 
 @pytest.fixture(scope="session")
@@ -39,13 +39,11 @@ async def db_engine():
     """
     Session-scoped engine + schema creation.
     Tables are created once and shared across all tests in the session.
-    Using connect_args to allow the same in-memory DB to be shared
-    across multiple connections (required for SQLite :memory:).
     """
     engine = create_async_engine(
         TEST_DATABASE_URL,
         echo=False,
-        connect_args={"check_same_thread": False},
+        connect_args={"check_same_thread": False, "uri": True},
     )
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -68,7 +66,7 @@ async def test_db(db_engine):
         yield session
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="function", autouse=True)
 def override_db(test_db):
     """
     Patches app.database.session.get_db_context so that any tool
@@ -79,5 +77,7 @@ def override_db(test_db):
     async def _mock_ctx():
         yield test_db
 
-    with patch("app.database.session.get_db_context", return_value=_mock_ctx()):
+    with patch("app.database.session.get_db_context", side_effect=_mock_ctx):
         yield
+
+

@@ -45,14 +45,14 @@ class RetrievedChunk:
         similarity_score: Relevance score (0.0–1.0, higher = more relevant).
         citation        : Formatted citation string for display to the user.
     """
-    chunk_id: str
-    text: str
-    source_file: str
-    title: str
-    chunk_index: int
-    total_chunks: int
-    similarity_score: float
-    citation: str
+    chunk_id: str = ""
+    text: str = ""
+    source_file: str = ""
+    title: str = ""
+    chunk_index: int = 0
+    total_chunks: int = 1
+    similarity_score: float = 0.0
+    citation: str = ""
 
 
 def _format_citation(title: str, source_file: str, chunk_index: int) -> str:

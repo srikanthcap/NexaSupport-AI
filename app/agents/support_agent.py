@@ -349,6 +349,8 @@ INSTRUCTIONS:
 def _infer_category(query: str) -> str:
     """Heuristic category classifier for auto-created escalation tickets."""
     q = query.lower()
+    if any(k in q for k in ["laptop", "screen", "keyboard", "mouse", "printer", "hardware"]):
+        return "Hardware"
     if any(k in q for k in ["vpn", "cisco", "anyconnect", "network", "wifi", "internet"]):
         return "VPN"
     if any(k in q for k in ["email", "outlook", "mail", "exchange", "teams"]):
@@ -357,11 +359,10 @@ def _infer_category(query: str) -> str:
         return "Password"
     if any(k in q for k in ["access", "permission", "portal", "sap", "jira", "aws"]):
         return "Access"
-    if any(k in q for k in ["laptop", "screen", "keyboard", "mouse", "printer", "hardware"]):
-        return "Hardware"
     if any(k in q for k in ["install", "software", "app", "crash", "update", "license"]):
         return "Software"
     return "Other"
+
 
 
 _agent_instance: Optional[SupportAgent] = None

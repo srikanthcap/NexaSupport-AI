@@ -227,3 +227,46 @@ class TicketService:
             "in_progress": total - open_count - resolved_count - escalated_count,
             "resolution_rate": round(resolved_count / total * 100, 1) if total > 0 else 0.0,
         }
+
+
+# ── Standalone Helper Functions (Convenience Wrappers) ───────────────────────
+
+async def create_ticket(
+    session: AsyncSession,
+    user_id: str,
+    category: str,
+    priority: str = "medium",
+    summary: str = "",
+    description: str = "",
+) -> Ticket:
+    """Convenience wrapper around TicketService.create_ticket."""
+    service = TicketService(session)
+    data = TicketCreate(
+        user_id=user_id,
+        category=category,
+        priority=priority,
+        summary=summary,
+        description=description,
+    )
+    return await service.create_ticket(data)
+
+
+async def search_tickets_fulltext(
+    session: AsyncSession,
+    query: str,
+    category: Optional[str] = None,
+    limit: int = 5,
+) -> list[Ticket]:
+    """Convenience wrapper around TicketService.search_similar_incidents."""
+    service = TicketService(session)
+    return await service.search_similar_incidents(query=query, category=category, limit=limit)
+
+
+async def get_ticket_by_id(
+    session: AsyncSession,
+    ticket_id: str,
+) -> Optional[Ticket]:
+    """Convenience wrapper around TicketService.get_ticket."""
+    service = TicketService(session)
+    return await service.get_ticket(ticket_id)
+
